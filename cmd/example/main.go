@@ -3,71 +3,61 @@ package main
 import (
 	"flag"
 	"fmt"
+	lab2 "go_lab_second"
 	"io"
 	"os"
 	"strings"
 )
 
-type ComputeHandler struct {
-	Input  io.Reader
-	Output io.Writer
-}
-
-func (h *ComputeHandler) Compute() error {
-	data := new(strings.Builder)
-	_, err := io.Copy(data, h.Input)
-	if err != nil {
-		return err
-	}
-	expression := strings.TrimSpace(data.String())
-	result, err := PostfixToPrefix(expression)
-	if err != nil {
-		return err
-	}
-	_, err = fmt.Fprintln(h.Output, result)
-	return err
-}
+var (
+	inputExpression = flag.String("e", "", "Expression to compute")
+	inputFile       = flag.String("f", "", "Path/to/expression-file")
+	outputFile      = flag.String("o", "", "Path/to/output-file")
+)
 
 func main() {
-	var expr string
-	var inputFile string
-	var outputFile string
-
-	flag.StringVar(&expr, "e", "", "Вхідний постфіксний вираз")
-	flag.StringVar(&inputFile, "f", "", "Файл з вхідним постфіксним виразом")
-	flag.StringVar(&outputFile, "o", "", "Файл для запису префіксного виразу")
 	flag.Parse()
 
 	var input io.Reader
-	var output io.Writer = os.Stdout
+	var output io.Writer
 
-	if expr != "" {
-		input = strings.NewReader(expr)
-	} else if inputFile != "" {
-		file, err := os.Open(inputFile)
+	if *inputExpression != "" {
+		input = strings.NewReader(*inputExpression)
+	} else if *inputFile != "" {
+		file, err := os.Open(*inputFile)
+
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "Помилка відкриття файла:", err)
-			return
+			fmt.Fprintln(os.Stderr, "Cannot open file.", err)
 		}
+
 		defer file.Close()
+
 		input = file
 	} else {
-		fmt.Fprintln(os.Stderr, "Необхідно вказати вхідний вираз або файл з виразом")
-		return
+		fmt.Fprintln(os.Stderr, "Usage: go run cmd/example/main.go -e <expression> | -f <path/to/expression-file [-o <path/to/outputfile>]")
 	}
 
-	if outputFile != "" {
-		file, err := os.Create(outputFile)
+	if *outputFile != "" {
+		file, err := os.Create(*outputFile)
+
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "Помилка створення файла:", err)
-			return
+			fmt.Fprintln(os.Stderr, "Cannot create file.", err)
 		}
+
 		defer file.Close()
+
 		output = file
+	} else {
+		output = os.Stdout
 	}
 
-	handler := &ComputeHandler{Input: input, Output: output}
+	handler := lab2.ComputeHandler{
+		Input:      input,
+		Output:     output,
+		Calculator: &lab2.PrefixCalculator{},
+	}
+
 	if err := handler.Compute(); err != nil {
-		fmt.Fprintln(os.Stderr, "Помилка обчислення:", err)
+		fmt.Fprintln(os.Stderr, "Unexpected error occured.", err)
 	}
 }

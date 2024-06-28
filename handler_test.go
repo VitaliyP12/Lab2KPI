@@ -1,36 +1,48 @@
-package main
+package lab2
 
 import (
+	"bytes"
+	"errors"
+	"io"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func TestComputeHandler(t *testing.T) {
+func TestCompute(t *testing.T) {
+	type fields struct {
+		Input  io.Reader
+		Output io.Writer
+	}
+
+	var writer bytes.Buffer
+	mockError := "mockError"
+
 	tests := []struct {
-		input    string
-		expected string
+		name       string
+		fields     fields
+		calculator PrefixCalculatorSpy
+		isError    bool
 	}{
-		{"4 2 +", "+ 4 2"},
-		{"4 2 5 * + 7 +", "+ + 4 * 2 5 7"},
+		{"Should pass", fields{strings.NewReader("4 2 - 3 * 5 +"), &writer}, PrefixCalculatorSpy{"(+(*(-42)3)5)", nil}, false},
+		{"Should pass", fields{strings.NewReader("+5 - 10 * 2  6"), &writer}, PrefixCalculatorSpy{"", errors.New(mockError)}, true},
 	}
 
-	for _, tt := range tests {
-		input := strings.NewReader(tt.input)
-		output := new(strings.Builder)
-		handler := &ComputeHandler{Input: input, Output: output}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			computeHandler := &ComputeHandler{
+				Input:      test.fields.Input,
+				Output:     test.fields.Output,
+				Calculator: &test.calculator,
+			}
+			err := computeHandler.Compute()
 
-		err := handler.Compute()
-		assert.Nil(t, err)
-		assert.Equal(t, tt.expected, strings.TrimSpace(output.String()))
+			if test.isError {
+				assert.Error(t, err, mockError)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
 	}
-
-	// Тест на неправильні дані
-	input := strings.NewReader("")
-	output := new(strings.Builder)
-	handler := &ComputeHandler{Input: input, Output: output}
-
-	err := handler.Compute()
-	assert.NotNil(t, err)
 }

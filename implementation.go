@@ -1,41 +1,41 @@
-package main
+package lab2
 
 import (
 	"errors"
 	"strings"
 )
 
-// isOperator перевіряє, чи є символ оператором
-func isOperator(c string) bool {
-	operators := "+-*/^"
-	return strings.Contains(operators, c)
+type PrefixCalculator struct{}
+
+func isOperator(token string) bool {
+	return token == "+" || token == "-" || token == "*" || token == "/"
 }
 
-// PostfixToPrefix перетворює постфіксний вираз у префіксний
-func PostfixToPrefix(postfix string) (string, error) {
-	if postfix == "" {
-		return "", errors.New("порожній вхідний вираз")
-	}
+func (ptic *PrefixCalculator) ConvertPrefixToPostfix(str string) (string, error) {
+	tokens := strings.Fields(str)
 	stack := []string{}
-	tokens := strings.Fields(postfix)
 
 	for _, token := range tokens {
 		if isOperator(token) {
 			if len(stack) < 2 {
-				return "", errors.New("недостатньо операндів у виразі")
+				return "", errors.New("invalid postfix expression")
 			}
-			op1 := stack[len(stack)-1]
-			stack = stack[:len(stack)-1]
+
 			op2 := stack[len(stack)-1]
 			stack = stack[:len(stack)-1]
-			newExpr := token + " " + op2 + " " + op1
-			stack = append(stack, newExpr)
+			op1 := stack[len(stack)-1]
+			stack = stack[:len(stack)-1]
+
+			prefixExpr := "(" + token + op1 + op2 + ")"
+			stack = append(stack, prefixExpr)
 		} else {
 			stack = append(stack, token)
 		}
 	}
+
 	if len(stack) != 1 {
-		return "", errors.New("некоректний вираз")
+		return "", errors.New("invalid postfix expression")
 	}
+
 	return stack[0], nil
 }
